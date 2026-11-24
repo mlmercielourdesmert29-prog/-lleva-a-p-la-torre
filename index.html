@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lleva a P a la torre</title>
+<meta name="description" content="Minijuego de vectores en el plano cartesiano: elige las cartas de desplazamiento correctas para llevar el punto P hasta la torre. Colegio Adventista Ozama · Matemáticas.">
+<meta name="theme-color" content="#071426">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Lleva a P a la torre · Minijuego de vectores">
+<meta property="og:description" content="Suma vectores y lleva el punto P hasta la torre. Modo rápido y modo completo.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23071426'/%3E%3Cpath d='M14 50 L46 18' stroke='%2338BDF8' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M48 16 L30 20 L44 34 Z' fill='%2338BDF8'/%3E%3Ccircle cx='14' cy='50' r='6' fill='%23E8A03A'/%3E%3C/svg%3E">
+<style>
+:root{--navy:#071426;--cyan:#38BDF8;--or:#E8A03A;--vi:#8B5CF6;--w:#F8FAFC;--g:#CBD5E1}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 70% 0,#1b2f6b,#071426 60%);color:var(--w);font-family:"Segoe UI",system-ui,sans-serif;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:18px;padding:12px 26px;flex-wrap:wrap}
+h1{font-size:clamp(22px,2.6vw,38px);margin:0;font-weight:800;margin-right:auto}h1 b{color:var(--cyan)}
+.eq{border:3px solid;border-radius:16px;padding:6px 16px;font-size:20px;font-weight:700;background:#0b1d36;color:var(--w);opacity:.5;cursor:pointer}
+.eq.act{opacity:1;box-shadow:0 0 22px currentColor}.eq span{color:var(--w);font-size:26px;margin-left:8px}
+.modo{display:flex;gap:6px}.md{font:700 16px "Segoe UI",system-ui,sans-serif;padding:8px 14px;border-radius:12px;border:2px solid #2d5d92;background:#0b1d36;color:#CBD5E1;cursor:pointer}.md.act{border-color:var(--cyan);color:#fff;background:#123a66}
+#ek{border-color:#9CC61E;color:#9CC61E}#em{border-color:#FF8A12;color:#FF8A12}
+main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(330px,430px);gap:18px;padding:0 26px 22px}
+#tab{background:linear-gradient(#123a66,#0a2242);border:3px solid var(--cyan);border-radius:24px;min-height:440px;display:flex}
+#tab svg{width:100%;height:calc(100vh - 110px);min-height:420px}
+aside{display:flex;flex-direction:column;gap:14px}
+.caja{background:#0b1d36;border:2px solid #2d5d92;border-radius:20px;padding:14px 18px}
+.caja h2{margin:0 0 6px;font-size:21px;color:var(--or)}.caja p{margin:0;font-size:20px;line-height:1.35}
+#cartas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.carta{font:700 27px "Cambria Math",Cambria,serif;padding:15px 6px;border-radius:16px;border:3px solid var(--vi);background:#1d1650;color:#fff;cursor:pointer;transition:transform .12s}
+.carta:hover:not(:disabled){transform:translateY(-3px);background:#31247c}.carta:disabled{opacity:.28;cursor:default}
+button:focus-visible{outline:4px solid #FFD84A;outline-offset:2px}
+#suma{font:22px/1.5 "Cambria Math",Cambria,serif;min-height:66px}#suma b{color:var(--cyan)}
+.fila{display:flex;gap:10px;flex-wrap:wrap}.bt{flex:1;font-size:18px;font-weight:700;padding:11px;border-radius:14px;border:2px solid var(--g);background:transparent;color:#fff;cursor:pointer;white-space:nowrap}
+.bt:hover{background:#17365f}.bt.ok{background:#15803d;border-color:#4ADE80}
+#msg{font-size:21px;font-weight:700;min-height:58px;color:#FFD84A}
+@media(max-width:900px){main{grid-template-columns:1fr}#tab svg{height:55vh}}
+</style>
+</head>
+<body>
+<header><h1>Lleva a <b>P</b> a la torre</h1>
+<div class="modo" role="group" aria-label="Modo de juego"><button class="md act" id="mr" title="Niveles 1, 3 y 4 (≈4 min)">Rápido · 3 niveles</button><button class="md" id="mc" title="Los 5 niveles">Completo · 5</button></div>
+<button class="eq act" id="ek">Kiwi<span>0</span></button><button class="eq" id="em">Mandarina<span>0</span></button></header>
+<main><div id="tab"></div>
+<aside>
+<div class="caja"><h2 id="niv"></h2><p id="txt"></p></div>
+<div id="cartas"></div>
+<div class="caja"><h2>Ruta de P</h2><div id="suma"></div></div>
+<div id="msg" role="status" aria-live="polite"></div>
+<div class="fila"><button class="bt" id="des">↶ Deshacer</button><button class="bt" id="rei">Reiniciar</button><button class="bt" id="pis">Pista</button></div>
+<div class="fila"><button class="bt ok" id="sig" hidden>Siguiente nivel →</button></div>
+</aside></main>
+<script>
+'use strict';
+// p: inicio · m: meta · c: cartas (cada una se usa una vez) · x: zonas donde P no puede detenerse · sol: una solución
+const NIVELES=[
+ {t:'Usa las dos cartas correctas para llegar a la Torre Resultante.',p:[0,0],m:[4,6],c:[[1,4],[3,2],[2,0],[-1,3]],x:[],sol:[[1,4],[3,2]]},
+ {t:'Los signos importan: la torre está a la izquierda.',p:[0,0],m:[-3,4],c:[[-2,3],[2,3],[-1,1],[1,-1]],x:[],sol:[[-2,3],[-1,1]]},
+ {t:'P no empieza en el origen. Calcula primero: final menos inicial.',p:[1,1],m:[6,4],c:[[6,4],[3,2],[2,1],[4,3]],x:[],sol:[[3,2],[2,1]]},
+ {t:'Evita detenerte en los rayos violetas. Piensa en el orden.',p:[-2,0],m:[4,5],c:[[3,2],[2,-1],[1,4],[-1,2]],x:[[1,2],[-1,4]],sol:[[2,-1],[3,2],[1,4]]},
+ {t:'¡Gran final! Necesitas tres vectores y hay dos rayos.',p:[5,-1],m:[-2,6],c:[[-4,1],[-2,4],[-1,2],[2,2],[-3,-1]],x:[[1,0],[3,3]],sol:[[-1,2],[-4,1],[-2,4]]}
+];
+const X0=-5,X1=8,Y0=-3,Y1=8,U=60,W=(X1-X0)*U+80,H=(Y1-Y0)*U+80,X=x=>40+(x-X0)*U,Y=y=>40+(Y1-y)*U;
+const $=id=>document.getElementById(id),n=v=>String(v).replace('-','−'),par=v=>'('+n(v[0])+', '+n(v[1])+')';
+const MODOS={rapido:[0,2,3],completo:[0,1,2,3,4]};let orden=MODOS.rapido,k=0;
+let niv=0,usadas=[],anim=false,ganado=false,puntos=[0,0],eq=0,pistaUsada=false,ac=null;
+const son=(fs,d=.12)=>{try{ac=ac||new AudioContext();fs.forEach((f,i)=>{const o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime+i*d*.7;o.frequency.value=f;g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+d*2);o.connect(g).connect(ac.destination);o.start(t);o.stop(t+d*2)})}catch(e){}};
+const pos=(k=usadas.length)=>usadas.slice(0,k).reduce((a,i)=>[a[0]+NIVELES[niv].c[i][0],a[1]+NIVELES[niv].c[i][1]],NIVELES[niv].p.slice());
+const flecha=(a,b,c)=>{const x1=X(a[0]),y1=Y(a[1]),x2=X(b[0]),y2=Y(b[1]),L=Math.hypot(x2-x1,y2-y1);if(L<2)return'';const u=(x2-x1)/L,v=(y2-y1)/L,h=Math.min(26,L),bx=x2-u*h,by=y2-v*h,s=h*.42;return`<line x1="${x1}" y1="${y1}" x2="${bx}" y2="${by}" stroke="${c}" stroke-width="20" opacity=".18"/><line x1="${x1}" y1="${y1}" x2="${bx+u*4}" y2="${by+v*4}" stroke="${c}" stroke-width="8" stroke-linecap="round"/><polygon points="${x2},${y2} ${bx-v*s},${by+u*s} ${bx+u*6},${by+v*6} ${bx+v*s},${by-u*s}" fill="${c}"/>`};
+const COL=['#38BDF8','#2DD4BF','#E8A03A','#A78BFA','#F472B6'];
+function dibuja(q,feliz){const N=NIVELES[niv];let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Plano cartesiano"><g font-family="Segoe UI,sans-serif" font-size="19" font-weight="700" fill="#E2EDF8">`;
+ for(let x=X0;x<=X1;x++)s+=`<line x1="${X(x)}" x2="${X(x)}" y1="${Y(Y0)}" y2="${Y(Y1)}" stroke="#5d9fdc" opacity=".4"/>`+(x?`<text x="${X(x)}" y="${Y(0)+24}" text-anchor="middle">${n(x)}</text>`:'');
+ for(let y=Y0;y<=Y1;y++)s+=`<line y1="${Y(y)}" y2="${Y(y)}" x1="${X(X0)}" x2="${X(X1)}" stroke="#5d9fdc" opacity=".4"/>`+(y?`<text x="${X(0)-11}" y="${Y(y)+7}" text-anchor="end">${n(y)}</text>`:'');
+ s+=`<text x="${X(0)-11}" y="${Y(0)+24}" text-anchor="end">0</text><text x="${X(X1)+18}" y="${Y(0)-10}" font-style="italic" font-size="24">x</text><text x="${X(0)+14}" y="${Y(Y1)-14}" font-style="italic" font-size="24">y</text></g><line x1="${X(X0)-14}" x2="${X(X1)+14}" y1="${Y(0)}" y2="${Y(0)}" stroke="#fff" stroke-width="4"/><line y1="${Y(Y0)+14}" y2="${Y(Y1)-14}" x1="${X(0)}" x2="${X(0)}" stroke="#fff" stroke-width="4"/>`;
+ N.x.forEach(z=>s+=`<g transform="translate(${X(z[0])},${Y(z[1])})"><circle r="24" fill="#8B5CF6" opacity=".35"/><path d="M4,-20 L-11,4 H-1 L-5,20 L12,-5 H2Z" fill="#C4B5FD" stroke="#2e1065" stroke-width="2"/></g>`);
+ const[mx,my]=[X(N.m[0]),Y(N.m[1])];s+=`<g transform="translate(${mx},${my})"><circle r="26" fill="#38BDF8" opacity=".3"/><circle r="7" fill="#fff"/><g transform="translate(26,4) scale(.2)"><path d="M-44,12 L-30,-250 L0,-282 V24Z" fill="#2189c4"/><path d="M0,24 V-282 L30,-250 L44,12Z" fill="#0f4a73"/><path d="M0,-400 L-17,-272 L0,-260 L17,-272Z" fill="#bfeaff"/></g></g><text x="${mx}" y="${my+42}" text-anchor="middle" font-size="20" font-weight="700" fill="#fff" stroke="#071426" stroke-width="5" paint-order="stroke">${par(N.m)}</text>`;
+ const pasos=usadas.length;for(let k=0;k<pasos;k++){const a=pos(k),b=k===pasos-1?q:pos(k+1);s+=flecha(a,b,COL[k%5])}
+ if(feliz&&pasos>1)s+=flecha(N.p,N.m,'#ffffff');
+ const bo=feliz?'M-8,6 q8,14 16,0z':'M-7,8 q7,6 14,0';s+=`<g transform="translate(${X(q[0])},${Y(q[1])})"><circle r="6" fill="#fff"/><g transform="translate(0,-42)"><path d="M-8,20 V30 M8,20 V30" stroke="#0879b5" stroke-width="6" stroke-linecap="round"/><circle r="23" fill="#38BDF8" stroke="#e0f6ff" stroke-width="2.5"/><ellipse cx="-8" cy="-4" rx="6" ry="8" fill="#fff"/><ellipse cx="8" cy="-4" rx="6" ry="8" fill="#fff"/><circle cx="-7" cy="-3" r="3.6"/><circle cx="9" cy="-3" r="3.6"/><path d="${bo}" fill="${feliz?'#06263f':'none'}" stroke="#06263f" stroke-width="3"/></g></g></svg>`;
+ $('tab').innerHTML=s}
+function panel(){const N=NIVELES[niv];$('niv').textContent=`Nivel ${k+1} de ${orden.length}`+(orden.length<NIVELES.length?` · nivel original ${niv+1}`:'');$('txt').innerHTML=`${N.t}<br><b>P:</b> ${par(N.p)} &nbsp; <b>Torre:</b> ${par(N.m)}`;
+ $('cartas').innerHTML=N.c.map((v,i)=>`<button class="carta" data-i="${i}" ${usadas.includes(i)||ganado||anim?'disabled':''}>${par(v)}</button>`).join('');
+ $('suma').innerHTML=par(N.p)+usadas.map(i=>' + '+par(N.c[i])).join('')+` = <b>${par(pos())}</b>`;$('sig').hidden=!ganado;$('sig').textContent=k<orden.length-1?'Siguiente nivel →':'Jugar otra vez';
+ ['ek','em'].forEach((id,i)=>{$(id).classList.toggle('act',eq===i);$(id).querySelector('span').textContent=puntos[i]})}
+function mover(i){if(anim||ganado||usadas.includes(i))return;const a=pos(),v=NIVELES[niv].c[i],b=[a[0]+v[0],a[1]+v[1]];
+ if(b[0]<X0||b[0]>X1||b[1]<Y0||b[1]>Y1){$('msg').textContent='Ese vector saca a P del mapa.';son([180]);return}
+ usadas.push(i);anim=true;$('msg').textContent='';panel();son([500,700]);const t0=performance.now(),D=650;let fin=false;
+ const acaba=()=>{if(fin)return;fin=true;anim=false;llega(b)};
+ const f=t=>{if(fin)return;const k=Math.min(1,Math.max(0,(t-t0)/D)),e=k*k*(3-2*k);dibuja([a[0]+v[0]*e,a[1]+v[1]*e],false);k<1?requestAnimationFrame(f):acaba()};requestAnimationFrame(f);setTimeout(acaba,D+250)}
+function llega(b){const N=NIVELES[niv];if(N.x.some(z=>z[0]===b[0]&&z[1]===b[1])){son([220,160]);$('msg').textContent='¡Zas! Ahí hay un rayo. Prueba otro orden.';usadas.pop();dibuja(pos(),false)}
+ else if(b[0]===N.m[0]&&b[1]===N.m[1]){ganado=true;const pts=pistaUsada?1:2;puntos[eq]+=pts;son([523,659,784,1047]);dibuja(b,true);$('msg').textContent=`¡Llegó a la torre! +${pts} para ${eq?'Mandarina':'Kiwi'}.`}
+ else{dibuja(b,false);if(usadas.length===N.c.length)$('msg').textContent='Sin más cartas. Deshaz un paso e inténtalo.'}panel()}
+function carga(){usadas=[];anim=ganado=pistaUsada=false;$('msg').textContent='';panel();dibuja(NIVELES[niv].p,false)}
+$('cartas').onclick=e=>{const b=e.target.closest('.carta');if(b)mover(+b.dataset.i)};
+$('des').onclick=()=>{if(anim||ganado||!usadas.length)return;usadas.pop();$('msg').textContent='';panel();dibuja(pos(),false)};
+$('rei').onclick=()=>{if(!anim&&!ganado){usadas=[];$('msg').textContent='';panel();dibuja(pos(),false)}};
+$('pis').onclick=()=>{if(ganado)return;pistaUsada=true;const N=NIVELES[niv],a=pos();$('msg').textContent=usadas.length?`Aún falta el desplazamiento (${n(N.m[0]-a[0])}, ${n(N.m[1]-a[1])}).`:`Final − inicial = (${n(N.m[0]-N.p[0])}, ${n(N.m[1]-N.p[1])}). Empieza con ${par(N.sol[0])}.`};
+$('sig').onclick=()=>{if(k===orden.length-1)puntos=[0,0];k=(k+1)%orden.length;niv=orden[k];eq=1-eq;carga()};
+const modo=m=>{if(anim)return;orden=MODOS[m];k=0;niv=orden[0];puntos=[0,0];eq=0;$('mr').classList.toggle('act',m==='rapido');$('mc').classList.toggle('act',m==='completo');carga()};
+$('mr').onclick=()=>modo('rapido');$('mc').onclick=()=>modo('completo');
+// Integración con la presentación: el control remoto (Av Pág / Re Pág) y Esc siguen manejando las diapositivas
+addEventListener('keydown',e=>{const d={PageDown:1,PageUp:-1,Escape:0}[e.key];if(d!==undefined&&parent!==window){e.preventDefault();parent.postMessage({type:'juego-nav',dir:d},'*')}});
+['ek','em'].forEach((id,i)=>$(id).onclick=()=>{if(!anim&&!ganado){eq=i;panel()}});
+carga();
+</script>
+</body>
+</html>
